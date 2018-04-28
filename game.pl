@@ -1,7 +1,3 @@
-% sample_gs("Action",GS), aggregate_all(set(GS6), (aggregate_all(set(GS3), (aggregate_all(set(GS1), step_action(GS,GS1,_), GS11), choose(GS11,GS2,_), step_action(GS2,GS3,_)), GS4), choose(GS4,GS5,_), step_action(GS5,GS6,_)), GS7), length(GS7,N).
-%sample_gs("Action",GS), profile(aggregate_all(set(GS3), (aggregate_all(set(GS1), step_action(GS,GS1,_), GS11), choose(GS11,GS2,_), step_action(GS2,GS3,_)), GS4)), length(GS4,N).
-%sample_gs("Action",GS), profile(aggregate_all(set(GS3), (step_action(GS,GS1,_), step_action(GS1,GS3,_)), GS4)), length(GS4,N).
-%sample_gs("Action",GS), aggregate_all(set(GS1), step_action(GS,GS1,_), GS11), length(GS11,N).
 % TODO: When activating skill bonuses, they go in the Active list under ("SkillBonus",Val).
 
 :- discontiguous single_step/3.

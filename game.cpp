@@ -40,7 +40,7 @@ int main() {
 	//_putenv("SWI_HOME_DIR=C:\\dev\\swipl");
 
 	char flag[] = "-l";
-	char file[] = "game_v2.pl";
+	char file[] = "game.pl";
 	static char *av[] = { flag, file, NULL };
 	
 	if(!PL_initialise(2,av)) {

@@ -12,7 +12,7 @@ An example of redundancy, for a player, their 3 actions:
 - gain a resource, draw a card, gain a resource
 - gain a resource, gain a resource, draw a card
 
-The three paths will end up in the same (except for a few cases) new state: player has a new card and gained 2 resources.  By consolidating to one path (doesn't matter which) the statespace explosion can be minimized.  Most paths can be consolidated via redundant permutations, essentially boiling down to a combination problem.
+The three paths will end up in the same new state (except for a few cases): player has a new card and gained 2 resources.  By consolidating to one path, doesn't matter which, the statespace explosion can be minimized.  Most paths can be consolidated via redundant permutations, essentially boiling down to a combination problem.
 
 A secondary goal is to use this as a guiding tool that lists all possible actions given a specific gamestate.  This could be helpful for introductory purposes, which would lead to a better understanding of game mechanics.
 
