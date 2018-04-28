@@ -16,6 +16,11 @@ The three paths will end up in the same (except for a few cases) new state: play
 
 A secondary goal is to use this as a guiding tool that lists all possible actions given a specific gamestate.  This could be helpful for introductory purposes, which would lead to a better understanding of game mechanics.
 
-### Why this project?
+## Building and running
 
-I like solving problems by using computers.  I've played the initial core campaign many times with different investigators and can still just barely survive on easy difficulty.  I became curious how it would be possible to 'win' on a harder difficulty.  By having a computer simulate all possible plays I think I'll be able to gain some insight into how this could work.    
+Setup: Ubuntu 16.04 (sub-system on Windows 10)
+Dependencies: swipl
+
+Build: make
+Execute: ./game
+   
