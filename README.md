@@ -19,8 +19,10 @@ A secondary goal is to use this as a guiding tool that lists all possible action
 ## Building and running
 
 Setup: Ubuntu 16.04 (sub-system on Windows 10)
+
 Dependencies: swipl
 
 Build: make
+
 Execute: ./game
    
