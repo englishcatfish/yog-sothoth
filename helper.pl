@@ -53,3 +53,11 @@ max(X,Y,Y) :- X @< Y.
 
 min(X,Y,X) :- X @=< Y.
 min(X,Y,Y) :- X @> Y.
+
+contains(L,X) :-
+	choose(L,X,_),!.
+
+in(X,[X|_]).
+in(X,[Y|L]) :-
+	X \= Y,
+	in(X,L).

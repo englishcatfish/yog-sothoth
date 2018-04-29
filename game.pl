@@ -77,7 +77,7 @@ sample_gs("ST.3", GS) :-
 	I2 = (1002,([],[1014,1087],[],[],[]),(1111,3,0,0,5,0,false),(3,3,3,3,6,6),[],[]),
 	Is = [I1,I2],
 	Map = [(1111,true,false,4,[])],
-	E1 = ((1160,1),(2,2,2,1,1),(1111,0,0,false,[])),
+	%E1 = ((1160,1),(2,2,2,1,1),(1111,0,0,false,[])),
 	Enc = ([],[],[],[],[],(0,[]),(0,[])),
 	S = [("Skill Test",3,"Intel",2,ChaosBag,[1014,1087,1014],[(1001,[1087,1014]),(1002,[1014])]),("Investigate",1111)],
 	GS = (G,Is,Map,Enc,S).
@@ -104,172 +104,186 @@ sample_gs("ST.3", GS) :-
 % - Attempt to evade an enemy engaged with you.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODO: separate get statements that are dependent
+
+% Q: Is it always the case that the Stack will be 1 single element at this point?
 % No more actions
-single_step(GS, GSN, Action) :-
-	game_state_get(["Stack","CurrInv"], GS, [["Next Action"],I]),
-	inv_get("Actions",I,0),!,
-	game_state_set("Stack",["End Turn"],GS,GSN),
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "CurrInv"], GS_in, [["Next Action"], I]),
+	inv_get("Actions", I, 0),
+	game_state_set("Stack", ["End Turn"], GS_in, GS_out),
 	Action = ["Turn finished"].
 
-% Investigator turn finished
-% choose next investigator
+% Investigator may choose to end turn early
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "CurrInv"], GS_in, [["Next Action"], I]),
+	inv_get("Actions", I, N),
+	N @> 0,
+	inv_set("Actions", 0, I, I1),
+	game_state_set(["Stack", "Inv"],[["End Turn"], I1], GS_in, GS_out),
+	Action = ["End turn early"].
 
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,["End Turn"]),
-	game_state_set("Stack",["Next Player"],GS,GSN),
+% Investigator turn finished
+% TODO: process end of turn event limits
+single_step(GS_in, GS_out, Action) :-
+	game_state_get("Stack", GS_in, ["End Turn"]),
+	game_state_set("Stack", ["Next Player"], GS_in, GS_out),
 	Action = ["Ending Turn"].
 
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,["Next Player"]),
-	% choose next investigator
-	game_state_get("Invs",GS,Is),
-	choose(Is,I,_),
-	inv_get("Actions",I,N),
+% choose next investigator
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "Invs"], GS_in, [["Next Player"], Is]),
+	% choose investigator that still has actions left
+	choose(Is, I, _),
+	inv_get("Actions", I, N),
 	N @> 0,
-	inv_get("Id",I,Id),
-	game_state_set(["CurrInvId","Stack"],[Id,["Begin Turn"]],GS,GSN),
-	string_builder(["Selected ",Id," to go next."],Str),
+	inv_get("Id", I, Id),
+	game_state_set(["CurrInvId", "Stack"], [Id, ["Begin Turn"]], GS_in, GS_out),
+	string_builder(["Selected ", Id, " to go next."], Str),
 	Action = [Str].
 
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,["Begin Turn"]),
-	game_state_set("Stack",["Next Action"],GS,GSN),
+% Formalize begining of player turn
+single_step(GS_in, GS_out, Action) :-
+	game_state_get("Stack", GS_in , ["Begin Turn"]),
+	game_state_set("Stack", ["Next Action"], GS_in, GS_out),
 	Action = ["Begin turn"].
 
 % Investigate your location (Basic)
-% at least one clue at your location
-
-single_step(GS, GSN, Action) :-
-	game_state_get(["Stack","CurrInv","ChaosBag"], GS, [["Next Action" | Stack],I,ChaosBag]),
-	inv_get(["Actions","Loc","Active"],I,[Actions,LocId,Active]),
-	game_state_get(("Loc",LocId),GS,Loc),
-	loc_get(["Clues","Shroud"],Loc,[Clues,Shroud]),
+% condition: at least one clue at your location
+% TODO: handle more complex scenarios like locations that use 
+%       different skill type for investigation
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "CurrInv"], GS_in, [["Next Action"], I]),
+	inv_get("Actions", I, N),
+	N @> 0,
+	inv_get("Loc", I, LocId),
+	game_state_get(("Loc", LocId), GS_in, Loc),
+	loc_get("Clues", Loc, Clues),
 	Clues @> 0,
-	Actions @> 0, Actions1 is Actions - 1,
-	inv_set(["Actions","Active"],[Actions1,[("SkillBonus",0)|Active]],I,I1),
-	Head1 = ("Investigate",("Location",LocId),false),
-	Head2 = ("Skill Test", 2, "Intel", Shroud, ChaosBag),
-	game_state_set(["Stack","Inv"],[[Head2,Head1,"End Action"|Stack],I1],GS,GSN),
-	string_builder(["Investigate ",LocId], Str),
+	N1 is N - 1,
+	game_state_get("ChaosBag", GS_in, ChaosBag),
+	loc_get("Shroud", Loc, Shroud),
+	inv_get("Active", I, Active),
+	inv_set(["Actions", "Active"], [N1, [("SkillBonus", 0)|Active]], I, I1),
+	H1 = ("Investigate", ("Location", LocId), false),
+	H2 = ("Skill Test", 2, "Intel", Shroud, ChaosBag),
+	game_state_set(["Stack", "Inv"],[[H2, H1, "End Action"], I1], GS_in, GS_out),
+	string_builder(["Investigate ", LocId], Str),
 	Action = [Str].
 
 % Move to a connecting location
 % - Choose an unlocked connecting location to move to
 % - Will be split into two events: MoveOut, MoveIn
-
-single_step(GS, GSN, Action) :-
-	game_state_get(["Stack","CurrInv","Map"],GS,[["Next Action" | Stack],I,Map]),
-	inv_get("Loc",I,LocId),
-	loc_get("Connection",LocId,Map,DId),
-	Head = ("Move","MoveOut",LocId,DId),
-	game_state_set("Stack",[Head|Stack],GS,GSN),
-	string_builder(["Move from ",LocId," to ",DId,"."],Str),
+%   Contrary to the rules, which say this is "simulataneous", but it'll behave that way
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "CurrInv"], GS_in, [["Next Action"], I]),
+	inv_get("Actions", I, N),
+	N @> 0,
+	game_state_get("Map", GS_in, Map),
+	inv_get("Loc", I, LocId),
+	loc_get("Connection", LocId, Map, DstId),
+	game_state_set("Stack", [("Move", "MoveOut", LocId, DstId)|"End Action"], GS_in, GS_out),
+	string_builder(["Move from ", LocId, " to ", DstId],Str),
 	Action = [Str].
 
 % MoveOut:
 % Most places you can simply move out of.
-
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,[("Move","MoveOut",SId,DId)|Stack]),
-	game_state_set("Stack",[("Move","MoveIn",SId,DId)|Stack],GS,GSN),
-	string_builder(["Moving out of ",SId],Str),
-	Action = [Str].
-
-% 1113, Attic
-% -F->
-% After you enter the Attic: Take 1 horror
-% REDCUT
-
-single_step(GS, GSN, Action) :-
-	game_state_get(["Stack","CurrInv",("Loc",1113)],GS,[[("Move","MoveIn",_,1113)|Stack],I,Loc]),
-	loc_get("Revealed",Loc,true),
-	!,
-	inv_set("Loc",1113,I,I1),
-	game_state_set(["Stack","Inv"],[[("Assign Affliction",0,1)|Stack],I1],GS,GSN),
-	Action = ["Move into 1113"].
-
-% 1114, Cellar
-% -F->
-% After you enter the Cellar: Take 1 damage
-% REDCUT
-
-single_step(GS, GSN, Action) :-
-	game_state_get(["Stack","CurrInv",("Loc",1114)],GS,[[("Move","MoveIn",_,1114)|Stack],I,Loc]),
-	loc_get("Revealed",Loc,true),
-	!,
-	inv_set("Loc",1114,I,I1),
-	game_state_set(["Stack","Inv"],[[("Assign Affliction",1,0)|Stack],I1],GS,GSN),
-	Action = ["Move into 1114"].
-
-% MoveIn:
-% Most places you can simply move into.
-
-single_step(GS, GSN, Action) :-
-	game_state_get(["Stack","CurrInv",("Loc",DId)],GS,[[("Move","MoveIn",_,DId)|Stack],I,Loc]),
-	loc_get("Revealed",Loc,true),
-	inv_set("Loc",DId,I,I1),
-	game_state_set(["Stack","Inv"],[Stack,I1],GS,GSN),
-	string_builder(["Move into ",DId],Str),
+% TODO: handle locations like 1115 that force a test to leave
+single_step(GS_in, GS_out, Action) :-
+	game_state_get("Stack", GS_in, [("Move", "MoveOut", SrcId, DstId)|Stack]),
+	game_state_set("Stack", [("Move", "MoveIn", SrcId, DstId)|Stack], GS_in, GS_out),
+	string_builder(["Moving out of ", SrcId], Str),
 	Action = [Str].
 
 % MoveIn:
 % If location is not revealed, then reveal and add clues
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", ("Loc", DstId)], GS_in, [[("Move", "MoveIn" , _, DstId)|_], Loc]),
+	loc_get("Revealed", Loc, false),
+	game_state_get("NumInv", GS_in, N),
+	location_get("Clues", N, DstId, Clues),
+	loc_set(["Revealed", "Clues"],[true, Clues], Loc, Loc1),
+	game_state_set("Loc", Loc1, GS_in, GS_out),
+	string_builder(["Revealing location ", DstId],Str),
+	Action = [Str].
 
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,[("Move","MoveIn",_,DId)|_]),
-	game_state_get(("Loc",DId),GS,Loc),
-	loc_get("Revealed",Loc,false),
-	game_state_get("NumInv",GS,N),
-	location_get("Clues",N,DId,Clues),
-	loc_set(["Revealed","Clues"],[true,Clues],Loc,Loc1),
-	game_state_set("Loc",Loc1,GS,GSN),
-	string_builder(["Revealing location ",DId],Str),
+% TODO: If there are enemies at the location you move to, they engage you immediately
+
+% MoveIn:
+% 1113, Attic
+% -F->
+% After you enter the Attic: Take 1 horror
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", ("Loc", 1113)], GS_in,[[("Move", "MoveIn", _, 1113)|Stack], Loc]),
+	loc_get("Revealed", Loc, true),
+	game_state_get("CurrInv", GS_in, I),
+	inv_set("Loc", 1113, I, I1),
+	game_state_set(["Stack", "Inv"],[[("Assign Affliction", 0, 1)|Stack], I1], GS_in, GS_out),
+	Action = ["Move into 1113"].
+
+% MoveIn:
+% 1114, Cellar
+% -F->
+% After you enter the Cellar: Take 1 damage
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", ("Loc", 1114)], GS_in, [[("Move", "MoveIn", _, 1114)|Stack], Loc]),
+	loc_get("Revealed", Loc, true),
+	game_state_get("CurrInv", GS_in, I),
+	inv_set("Loc", 1114, I, I1),
+	game_state_set(["Stack", "Inv"],[[("Assign Affliction", 1, 0)|Stack], I1], GS_in, GS_out),
+	Action = ["Move into 1114"].
+
+% MoveIn:
+% Most places you can simply move into.
+single_step(GS_in, GS_out, Action) :-
+	game_state_get("Stack", GS_in, [("Move", "MoveIn", _, DstId)|Stack]),
+	\+in(DstId, [1113, 1114]),
+	game_state_get(("Loc", DstId), GS_in, Loc),
+	loc_get("Revealed", Loc, true),
+	game_state_get("CurrInv", GS_in, I),
+	inv_set("Loc", DstId, I, I1),
+	game_state_set(["Stack", "Inv"],[Stack, I1], GS_in, GS_out),
+	string_builder(["Move into ", DstId], Str),
 	Action = [Str].
 
 % Assign Affliction
 % Right now, just going to assign to investigator
 % TODO: Choose how to distribute and what amounts to each card
-
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,[("Assign Affliction",D,H)|Stack]),
-	game_state_set("Stack",[("Apply Affliction",D,H,"CurrInv")|Stack],GS,GSN),
-	string_builder(["Assigned ",D," damage and ",H," horror to investigator"],Str),
+single_step(GS_in, GS_out, Action) :-
+	game_state_get("Stack", GS_in, [("Assign Affliction", D, H)|Stack]),
+	game_state_set("Stack", [("Apply Affliction", D, H, "CurrInv")|Stack], GS_in, GS_out),
+	string_builder(["Assigned ", D, " damage and ", H, " horror to investigator"], Str),
 	Action = [Str].
 
 % TODO: What if the investigator faints?
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,[("Apply Affliction",D,H,"CurrInv")|Stack]),
-	game_state_get("CurrInv",GS,I),
-	inv_get(["Health","Sanity"],I,[Health,Sanity]),
-	Health1 is Health - D,
-	Sanity1 is Sanity - H,
-	inv_set(["Health","Sanity"],[Health1,Sanity1],I,I1),
-	game_state_set(["Stack","Inv"],[Stack,I1],GS,GSN),
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack","CurrInv"], GS_in, [[("Apply Affliction", Dmg, Hrr, "CurrInv")|Stack], I]),
+	inv_get(["Health", "Sanity"], I, [Health, Sanity]),
+	Health1 is Health - Dmg,
+	Sanity1 is Sanity - Hrr,
+	inv_set(["Health", "Sanity"], [Health1, Sanity1], I, I1),
+	game_state_set(["Stack", "Inv"], [Stack, I1], GS_in, GS_out),
 	Action = ["Applying affliction to investigator"].
 
 % Draw 1 card
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,["Next Action"|Stack]),
-	game_state_get("CurrInv",GS,I),
-	inv_get(["Resources","Deck"],I,[Res,Deck]),
-	Res @> 0, 
-	Res1 is Res - 1,
-	choose(Deck,Card,Deck1),
-	inv_set(["Resources","Deck"],[Res1,Deck1],I,I1),
-	game_state_set(["Stack","Inv"],[[("Reveal Card",Card),"End Action"|Stack],I1],GS,GSN),
-	string_builder(["Drew card ",Card],Str),
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "CurrInv"], GS_in, [["Next Action"], I]),
+	inv_get(["Actions", "Deck"], I, [N, Deck]),
+	N @> 0,
+	N1 is N - 1,
+	choose(Deck, Card, Deck1),
+	inv_set(["Actions", "Deck"], [N1, Deck1], I, I1),
+	game_state_set(["Stack", "Inv"], [[("Reveal Card",Card), "End Action"], I1], GS_in, GS_out),
+	string_builder(["Drew card ", Card], Str),
 	Action = [Str].
 
 % Reveal Card
 % TODO: Process revelation effects
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,[("Reveal Card",Card)|Stack]),
-	game_state_get("CurrInv",GS,I),
-	inv_get("Hand",I,Hand),
-	insert_card(Card,Hand,Hand1),
-	inv_set("Hand",Hand1,I,I1),
-	game_state_set(["Stack","Inv"],[Stack,I1],GS,GSN),
+single_step(GS_in, GS_out, Action) :-
+	game_state_get(["Stack", "CurrInv"], GS_in, [[("Reveal Card", Card)|Stack], I]),
+	inv_get("Hand", I, Hand),
+	insert_card(Card, Hand, Hand1),
+	inv_set("Hand", Hand1, I, I1),
+	game_state_set(["Stack", "Inv"], [Stack, I1], GS_in, GS_out),
 	Action = ["Adding Card to hand"].
 
 % TODO: Play a card
@@ -280,9 +294,9 @@ single_step(GS, GSN, Action) :-
 % TODO: AoE
 
 % TODO: process end action properly
-single_step(GS, GSN, Action) :-
-	game_state_get("Stack",GS,["End Action"|Stack]),
-	game_state_set("Stack",["Next Action"|Stack],GS,GSN),
+single_step(GS_in, GS_out, Action) :-
+	game_state_get("Stack", GS_in, ["End Action"|Stack]),
+	game_state_set("Stack", ["Next Action"|Stack], GS_in, GS_out),
 	Action = ["Ending action"].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SKILL TEST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

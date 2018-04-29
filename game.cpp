@@ -99,11 +99,12 @@ int main() {
 
 		PL_close_query(q);
 	
-		if(choices.size() == 1) {
+		// Uncomment the following for autosteps
+		/*if(choices.size() == 1) {
 			cout << choices[0][0] << endl;
 			selection = 0;
 			continue;
-		}
+		}*/
 
 		cout << endl;
 		for(int i = 0; i < choices.size(); i++) {

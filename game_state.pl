@@ -42,8 +42,11 @@ game_state_get("NumInv",GS,N) :-
 	game_state_get("InvOrder",GS,O),
 	length(O,N).
 
-game_state_get([],_,[]).
-game_state_get([H|T],I,[X|L]) :- game_state_get(H,I,X), game_state_get(T,I,L).
+game_state_get([H],I,[X]) :-
+	game_state_get(H,I,X).
+game_state_get([H|T],I,[X|L]) :- 
+	game_state_get(H,I,X), 
+	game_state_get(T,I,L).
 %%%%% Set rules
 % some set rules will not be used (e.g., scenario/difficulty)
 game_state_set("Global",G,GS,GS1) :- GS = (_,I,M,E,S), GS1 = (G,I,M,E,S). 
