@@ -868,23 +868,26 @@ single_step(GS_in, GS_out, Action) :-
 % -p->
 % Play when you would fail a skill test.  Get +2 to your skill value for that test.
 % Note: if AutoFail was drawn, then you don't get +2
+%       should this even really be allowed to be played then?
 
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv"],GS_in,[[Head|Stack],I]),
-	Head = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
+	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
 	ModifiedVal @< Difficulty,
 	% play Lucky!
-	inv_get(["Hand","Resources","Discard"],I,[Hand,R,Discard]),
-	choose(Hand,1080,Hand1),
-	R @>= 1, R1 is R - 1,
-	inv_set(["Hand","Resources","Discard"],[Hand1,R1,[1080|Discard]],I,I1),
+	inv_get("Hand", I, Hand),
+	choose(Hand, 1080, Hand0),
+	inv_get("Resources", I, Res),
+	Res @>= 1, Res0 is Res - 1,
+	inv_get("Discard", I, Discard),
+	inv_set(["Hand", "Resources", "Discard"], [Hand0, Res0, [1080 | Discard]], I, I1),
 	((Token \= "AutoFail",
-		ModifiedVal1 is 2 + ModifiedVal)
+		ModifiedVal0 is 2 + ModifiedVal)
 	;(Token = "AutoFail",
-		ModifiedVal1 = ModifiedVal)),
-	Head1 = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal1),
-	game_state_set(["Stack","Inv"],[[Head1|Stack],I1],GS_in,GS_out),
-	Action = ["Fast. Play Lucky!"].
+		ModifiedVal0 = ModifiedVal)),
+	Push = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal0),
+	game_state_set(["Stack", "Inv"], [[Push | Stack], I1], GS_in, GS_out),
+	Action = ["Fast. Play Lucky! (1080)"].
 
 % 1084, Lucky!
 % -p->
@@ -894,21 +897,24 @@ single_step(GS_in, GS_out, Action) :-
 % Note: if AutoFail was drawn, then you don't get +2
 
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv"],GS_in,[[Head|Stack],I]),
-	Head = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
+	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),	
 	ModifiedVal @< Difficulty,
 	% play Lucky!
-	inv_get(["Hand","Resources","Discard"],I,[Hand,R,Discard]),
-	choose(Hand,1084,Hand1),
-	R @>= 1, R1 is R - 1,
-	inv_set(["Hand","Resources","Discard"],[Hand1,R1,[1084|Discard]],I,I1),
+	inv_get("Hand", I, Hand),
+	choose(Hand, 1084, Hand0),
+	inv_get("Resources", I, Res),
+	Res @>= 1, Res0 is Res - 1,
+	inv_get("Discard", I, Discard),
+	inv_set(["Hand", "Resources", "Discard"], [Hand0, Res0, [1084 | Discard]], I, I1),
 	((Token \= "AutoFail",
-		ModifiedVal1 is 2 + ModifiedVal)
+		ModifiedVal0 is 2 + ModifiedVal)
 	;(Token = "AutoFail",
-		ModifiedVal1 = ModifiedVal)),
-	Head1 = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal1),
-	game_state_set(["Stack","Inv"],[[("Draw Card"),Head1|Stack],I1],GS_in,GS_out),
-	Action = ["Fast. Play Lucky!"].
+		ModifiedVal0 = ModifiedVal)),
+	Push0 = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal0),
+	Push1 = "Draw Card",
+	game_state_set(["Stack", "Inv"],[[Push1, Push0 | Stack], I1], GS_in, GS_out),
+	Action = ["Fast. Play Lucky! (1084)"].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SKILL TEST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -926,61 +932,68 @@ single_step(GS_in, GS_out, Action) :-
 % Investigate Location, Success
 % Discover clues at your location
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head,Head1|Stack]),
-	Head = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, "Success", SumVal),
-	Head1 = ("Investigate",("Location",LocId),false),
-	Head2 = ("Investigate",("Location",LocId),true),
-	bonus_clues_total(AllCommit,N,AllCommit1),
-	Head3 = ("Skill Test", 7, Skill, ChaosBag, AllCommit1, PsCommit, Token, "Success", SumVal),
+	Pop0 = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, "Success", SumVal),
+	Pop1 = ("Investigate", ("Location", LocId), false),
+	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
+	bonus_clues_total(AllCommit, N, AllCommit0),
 	NClues is 1 + N,
-	Head4 = ("Discover Clues",LocId,NClues),
-	game_state_set("Stack",[Head4,Head3,Head2|Stack],GS_in,GS_out),
-	string_builder(["Discover ",NClues," clue(s)."], Str),
+	Push0 = ("Investigate", ("Location", LocId), true),
+	Push1 = ("Skill Test", 7, Skill, ChaosBag, AllCommit0, PsCommit, Token, "Success", SumVal),
+	Push2 = ("Discover Clues", LocId, NClues),
+	game_state_set("Stack", [Push2, Push1, Push0 | Stack], GS_in, GS_out),
+	string_builder(["Discover ", NClues, " clue(s)."], Str),
 	Action = [Str].
 
 % Investigate Location, Fail
 % Don't discover any clues
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head,Head1|Stack]),
-	Head = ("Skill Test", 7, _,_,_,_,_, "Fail",_),
-	Head1 = ("Investigate",("Location",LocId),false),
-	Head2 = ("Investigate",("Location",LocId),true),
-	game_state_set("Stack",[Head,Head2|Stack],GS_in,GS_out),
+	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Fail", _),
+	Pop1 = ("Investigate", ("Location", LocId), false),
+	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
+	Push0 = ("Investigate", ("Location", LocId), true),
+	Push1 = Pop0,
+	game_state_set("Stack", [Push1, Push0 | Stack], GS_in, GS_out),
 	Action = ["Didn't discover any clues."].
 
 % Investigate Location
 % Finish applying skill test results
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head,Head1|Stack]),
-	Head = ("Skill Test",7,_,_,[],PsCommit,_,_,_),
-	Head1 = ("Investigate",_,true),
-	Head2 = ("Skill Test",8,PsCommit),
-	game_state_set("Stack",[Head2|Stack],GS_in,GS_out),
+	Pop0 = ("Skill Test", 7, _, _, [], PsCommit, _, _, _),
+	Pop1 = ("Investigate", _, true),
+	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
+	Push = ("Skill Test", 8, PsCommit),
+	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
 	Action = ["Done applying results"].
 
 % 1033, Dr. Milan Christopher
 % -r->
 % After you successfully investigate: Gain 1 resouce
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv"],GS_in,[[Head,Head1|Stack],I]),
-	Head = ("Skill Test", 7, _,_,_,_,_, "Success",_),
-	Head1 = ("Investigate",_,_),
-	inv_get(["Assets","Limits"],I,[Assets,Limits]),
-	choose(Assets,((1033,CId),_,_),_),
-	\+choose(Limits,("Action",(1033,CId)),_),
-	inv_set("Limits",[("Action",(1033,CId))|Limits],I,I1),
-	game_state_set(["Stack","Inv"],[[("Gain Resources",1),Head,Head1|Stack],I1],GS_in,GS_out),
+	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", _),
+	Pop1 = ("Investigate", _, _),	
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | Stack], I]),
+	inv_get("Assets", I, Assets),
+	Card = ((1033, UId), false, _),
+	in(Card, Assets),
+	inv_get("Limits", I, Limits),
+	\+in(("Action", (1033, UId)), Limits),
+	inv_set("Limits", [("Action", (1033, UId)) | Limits], I, I1),
+	Push0 = Pop1,
+	Push1 = Pop0,
+	Push2 = ("Gain Resources", 1),
+	game_state_set(["Stack", "Inv"], [[Push2, Push1, Push0 | Stack], I1], GS_in, GS_out),
 	Action  = ["-r-> Dr. Milan Christopher."].
 
 % 1045, Burglary
 % Investigate, if you succeed, instead of discovering clues, gain 3 resources.
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head,Head1|Stack]),
-	Head = ("Skill Test", 7, _,_,_,_,_, "Success",_),
-	Head1 = ("Investigate",("Special",1045),false),
-	Head2 = ("Investigate",("Special",1045),true),
-	Head3 = ("Gain Resources",3),
-	game_state_set("Stack",[Head3,Head,Head2|Stack],GS_in,GS_out),
+	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", _),
+	Pop1 = ("Investigate", ("Special", 1045), false),	
+	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
+	Push0 = ("Investigate", ("Special", 1045), true),
+	Push1 = Pop0,
+	Push2 = ("Gain Resources", 3),
+	game_state_set("Stack", [Push2, Push1, Push0 | Stack], GS_in, GS_out),
 	string_builder(["Gain 3 resources."], Str),
 	Action = [Str].
 
@@ -990,60 +1003,68 @@ single_step(GS_in, GS_out, Action) :-
 % exhaust Scavenging:
 % Choose an Item card in your discard pile and add it to your hand
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv"],GS_in,[[Head,Head1|_],I]),
-	Head = ("Skill Test", 7, _,_,_,_,_, "Success",N),
-	Head1 = ("Investigate",_,_),
+	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", N),
+	Pop1 = ("Investigate", _, _),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | _], I]),
 	N @>= 2,
-	inv_get(["Assets","Discard","Hand"],I,[Assets,Discard,Hand]),
-	choose(Assets,((1073,UId),false,T),Assets1),
-	choose(Discard,Item,Discard1),
-	has_type("Item",Item),
-	inv_set(["Assets","Discard","Hand"],[[((1073,UId),true,T)|Assets1],Discard1,[Item|Hand]],I,I1),
-	game_state_set("Inv",I1,GS_in,GS_out),
-	card_get("Name",Item,IName),
-	string_builder(["-r-> Scavenging, adding ",IName," to hand."],Str),
+	inv_get("Assets", I, Assets),
+	Card = ((1073, UId), false, Ts),
+	choose(Assets, Card, Assets0),
+	inv_get("Discard", I, Discard),
+	choose(Discard, Item, Discard0),
+	has_type("Item", Item),
+	inv_get("Hand", I, Hand),
+	% TODO: insert assets in order
+	% TODO: insert hand in order
+	inv_set(["Assets", "Discard", "Hand"], [[((1073, UId), true, Ts) | Assets0], Discard0, [Item | Hand]], I, I1),
+	game_state_set("Inv", I1, GS_in, GS_out),
+	card_get("Name", Item, IName),
+	string_builder(["-r-> Scavenging, adding ", IName, " to hand."], Str),
 	Action = [Str].
 
 % 1168, Obscuring Fog
 % -F->
 % After attached location is successfully investigated:
 % Discard Obscuring Fog
+% TODO: How to force events
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv","EncDiscard"],GS_in,[[Head,Head1|_],I,EDiscard]),
-	Head = ("Skill Test", 7, _,_,_,_,_, "Success",_),
-	Head1 = ("Investigate",_,_),
-	inv_get("Loc",I,LocId),
-	game_state_get("Loc",LocId,GS_in,Loc),
-	loc_get("Attached",Loc,Attached),
-	choose(Attached,1168,Attached1),
-	loc_set("Attached",Attached1,Loc,Loc1),
-	game_state_set(["Loc","EncDiscard"],[Loc1,[1168|EDiscard]],GS_in,GS_out),
+	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", _),
+	Pop1 = ("Investigate", _, _),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | _], I]),
+	inv_get("Loc", I, LocId),
+	game_state_get("Loc", LocId, GS_in, Loc),
+	loc_get("Attached", Loc, Attached),
+	choose(Attached, 1168, Attached0),
+	loc_set("Attached", Attached0, Loc, Loc0),
+	game_state_get("EncDiscard", GS_in, EncDiscard),
+	game_state_set(["Loc", "EncDiscard"], [Loc0, [1168 | EncDiscard]], GS_in, GS_out),
 	Action = ["-F-> Discard Obscuring Fog."].
 
 %%%%%%%% Skill Card effects
 % This is only for things like, draw 1 card, and not for bonuses that increase the impact
 % of the skill test initiating action.
 
+% TODO: make this one single large step and not multiple small ones
 % Skip non-skill cards
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head|Stack]),
-	Head = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, PassFail, SumVal),
-	choose(AllCommit,C,AllCommit1),
-	\+card_get("Kind",C,"Skill"),
-	Head1 = ("Skill Test", 7, Skill, ChaosBag, AllCommit1, PsCommit, Token, PassFail, SumVal),
-	game_state_set("Stack",[Head1|Stack],GS_in,GS_out),
-	string_builder([C," is not a skill card, continue."],Str),
+	Pop = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, PassFail, SumVal),
+	game_state_get("Stack", GS_in, [Pop | Stack]),
+	choose(AllCommit, Card, AllCommit0),
+	\+card_get("Kind", Card, "Skill"),
+	Push = ("Skill Test", 7, Skill, ChaosBag, AllCommit0, PsCommit, Token, PassFail, SumVal),
+	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
+	string_builder([Card," is not a skill card, continue."], Str),
 	Action = [Str].
 
 % 1039, Deduction
 % Fail skill test, it has no effect.
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head|Stack]),
-	Head = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, "Fail", SumVal),
-	choose(AllCommit,1039,AllCommit1),
-	Head1 = ("Skill Test", 7, Skill, ChaosBag, AllCommit1, PsCommit, Token, "Fail", SumVal),
-	game_state_set("Stack",[Head1|Stack],GS_in,GS_out),
-	Action = ["Failed skill test, discard 1039"].
+	Pop = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, "Fail", SumVal),
+	game_state_get("Stack", GS_in, [Pop | Stack]),
+	choose(AllCommit, 1039, AllCommit0),
+	Push = ("Skill Test", 7, Skill, ChaosBag, AllCommit0, PsCommit, Token, "Fail", SumVal),
+	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
+	Action = ["Failed skill test, 1039 has no effect"].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SKILL TEST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -1055,10 +1076,10 @@ single_step(GS_in, GS_out, Action) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 single_step(GS_in, GS_out, Action) :-
-	game_state_get("Stack",GS_in,[Head|Stack]),
-	Head = ("Skill Test", 8, PsCommit),
-	foldl(discard_committed,PsCommit,GS_in,GS1),
-	game_state_set("Stack",Stack,GS1,GS_out),
+	Pop = ("Skill Test", 8, PsCommit),
+	game_state_get("Stack", GS_in, [Pop | Stack]),
+	foldl(discard_committed, PsCommit, GS_in, GS_tmp),
+	game_state_set("Stack", Stack, GS_tmp, GS_out),
 	Action = ["Skill test ends."].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Discover Clues %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1069,17 +1090,17 @@ single_step(GS_in, GS_out, Action) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv",("Loc",LocId)],GS_in,[[Head|Stack],I,Loc]),
-	Head = ("Discover Clues",LocId,NClues),
-	loc_get("Clues",Loc,LClues),
-	inv_get("Clues",I,IClues),
-	min(NClues,LClues,Clues),
-	LClues1 is LClues - Clues,
-	IClues1 is IClues + Clues,
-	loc_set("Clues",LClues1,Loc,Loc1),
-	inv_set("Clues",IClues1,I,I1),
-	game_state_set(["Stack","Inv","Loc"],[Stack,I1,Loc1],GS_in,GS_out),
-	string_builder(["Gained ",Clues," clue(s)."],Str),
+	Pop = ("Discover Clues", LocId, NClues),
+	game_state_get(["Stack", "CurrInv", ("Loc",LocId)], GS_in, [[Pop | Stack], I, Loc]),
+	loc_get("Clues", Loc, LocClues),
+	inv_get("Clues", I, InvClues),
+	min(NClues, LocClues, Clues),
+	LocClues0 is LocClues - Clues,
+	InvClues0 is InvClues + Clues,
+	loc_set("Clues", LocClues0, Loc, Loc0),
+	inv_set("Clues", InvClues0, I, I0),
+	game_state_set(["Stack", "Inv", "Loc"], [Stack, I0, Loc0], GS_in, GS_out),
+	string_builder(["Gained ", Clues, " clue(s)."], Str),
 	Action = [Str].
 
 % 1007, Cover Up
@@ -1089,20 +1110,20 @@ single_step(GS_in, GS_out, Action) :-
 % Only really need to do this if there are 1 or more clues
 
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv",("Loc",LocId)],GS_in,[[Head|Stack],I,Loc]),
-	Head = ("Discover Clues",LocId,NClues),
-	loc_get("Clues",Loc,LClues),
-	min(NClues,LClues,Clues),
+	Pop = ("Discover Clues", LocId, NClues),
+	game_state_get(["Stack", "CurrInv", ("Loc",LocId)], GS_in, [[Pop | Stack], I, Loc]),
+	loc_get("Clues", Loc, LocClues),
+	min(NClues, LocClues, Clues),
 	Clues @> 0,
-	inv_get("Threats",I,Threats),
-	choose(Threats,((1007,UId),Tokens),Threats1),
-	choose(Tokens,("Clues",TClues),Tokens1),
-	TClues @> 0,
-	min(Clues,TClues,RClues),
-	TClues1 is TClues - RClues,
-	inv_set("Threats",[((1007,UId),[("Clues",TClues1)|Tokens1])|Threats1],I,I1),
-	game_state_set(["Stack","Inv"],[Stack,I1],GS_in,GS_out),
-	string_builder(["Discarded ",Clues," clue(s) from Cover Up."],Str),
+	inv_get("Threats", I, Threats),
+	choose(Threats, ((1007,UId),Tokens), Threats0),
+	choose(Tokens, ("Clues", CardClues), Tokens0),
+	CardClues @> 0,
+	min(Clues, CardClues, RemoveClues),
+	CardClues0 is CardClues - RemoveClues,
+	inv_set("Threats", [((1007, UId), [("Clues", CardClues0) | Tokens0]) | Threats0], I, I0),
+	game_state_set(["Stack", "Inv"], [Stack, I0], GS_in, GS_out),
+	string_builder(["Discarded ", Clues, " clue(s) from Cover Up."], Str),
 	Action = [Str].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Gain Resource %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1112,13 +1133,13 @@ single_step(GS_in, GS_out, Action) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 single_step(GS_in, GS_out, Action) :-
-	game_state_get(["Stack","CurrInv"],GS_in,[[Head|Stack],I]),
-	Head = ("Gain Resources",N),
-	inv_get("Resources",I,R),
-	R1 is R + N,
-	inv_set("Resources",R1,I,I1),
-	game_state_set(["Stack","Inv"],[Stack,I1],GS_in,GS_out),
-	string_builder(["Gained ",N," resource(s)."],Str),
+	Pop = ("Gain Resources", N),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
+	inv_get("Resources", I, Res),
+	Res0 is Res + N,
+	inv_set("Resources", Res0, I, I0),
+	game_state_set(["Stack", "Inv"], [Stack, I0], GS_in, GS_out),
+	string_builder(["Gained ", N, " resource(s)."], Str),
 	Action = [Str].
 
 % 1039, Deduction
