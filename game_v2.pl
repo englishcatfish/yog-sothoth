@@ -138,7 +138,7 @@ init_gs(GS) :-
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-single_step(GS_in, GS_out, Action) :-
+single_step(0, GS_in, GS_out, Action, 1) :-
 	Pop = "Start Investigation",
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Push = "Next Player",
@@ -148,7 +148,7 @@ single_step(GS_in, GS_out, Action) :-
 %%% Next Action
 % Q: Is it always the case that the Stack will be 1 single element at this point?
 % No more actions
-single_step(GS_in, GS_out, Action) :-
+single_step(2, GS_in, GS_out, Action, 3) :-
 	Pop = "Next Action",
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
 	inv_get("Actions", I, 0),
@@ -158,7 +158,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Next Action
 % Investigator may choose to end turn early
-single_step(GS_in, GS_out, Action) :-
+single_step(2, GS_in, GS_out, Action, 3) :-
 	Pop = "Next Action",
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
 	inv_get("Actions", I, N),
@@ -171,7 +171,7 @@ single_step(GS_in, GS_out, Action) :-
 %%% End Turn
 % Investigator turn finished
 % TODO: process end of turn event limits
-single_step(GS_in, GS_out, Action) :-
+single_step(3, GS_in, GS_out, Action, 1) :-
 	Pop = "End Turn",
 	game_state_get("Stack", GS_in, [Pop]),
 	Push = "Next Player",
@@ -180,7 +180,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Next Player
 % choose next investigator
-single_step(GS_in, GS_out, Action) :-
+single_step(1, GS_in, GS_out, Action, 4) :-
 	Pop = "Next Player",
 	game_state_get(["Stack", "Invs"], GS_in, [[Pop], Is]),
 	% choose investigator that still has actions left
@@ -195,7 +195,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Begin Turn
 % Formalize begining of player turn
-single_step(GS_in, GS_out, Action) :-
+single_step(4, GS_in, GS_out, Action, 2) :-
 	Pop = "Begin Turn",
 	game_state_get("Stack", GS_in, [Pop]),
 	Push = "Next Action",
@@ -207,7 +207,7 @@ single_step(GS_in, GS_out, Action) :-
 % condition: at least one clue at your location
 % TODO: handle more complex scenarios like locations that use 
 %       different skill type for investigation
-single_step(GS_in, GS_out, Action) :-
+single_step(2, GS_in, GS_out, Action, 5) :-
 	Pop = "Next Action",
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
 	inv_get("Actions", I, N),
@@ -233,7 +233,7 @@ single_step(GS_in, GS_out, Action) :-
 % - Choose an unlocked connecting location to move to
 % - Will be split into two events: MoveOut, MoveIn
 %   Contrary to the rules, which say this is "simulataneous", but it'll behave that way
-single_step(GS_in, GS_out, Action) :-
+single_step(2, GS_in, GS_out, Action, 6) :-
 	Pop = "Next Action",
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
 	inv_get("Actions", I, N),
@@ -250,7 +250,7 @@ single_step(GS_in, GS_out, Action) :-
 %%% Move, MoveOut:
 % Most places you can simply move out of.
 % TODO: handle locations like 1115 that force a test to leave
-single_step(GS_in, GS_out, Action) :-
+single_step(6, GS_in, GS_out, Action, 7) :-
 	Pop = ("Move", "MoveOut", SrcId, DstId),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Push = ("Move", "MoveIn", SrcId, DstId),
@@ -260,7 +260,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Move, MoveIn:
 % If location is not revealed, then reveal and add clues
-single_step(GS_in, GS_out, Action) :-
+single_step(6, GS_in, GS_out, Action, 6) :-
 	Pop = ("Move", "MoveIn" , _, DstId),
 	game_state_get(["Stack", ("Loc", DstId)], GS_in, [[Pop | _], Loc]),
 	loc_get("Revealed", Loc, false),
@@ -277,7 +277,7 @@ single_step(GS_in, GS_out, Action) :-
 % 1113, Attic
 % -F->
 % After you enter the Attic: Take 1 horror
-single_step(GS_in, GS_out, Action) :-
+single_step(7, GS_in, GS_out, Action, 8) :-
 	Pop = ("Move", "MoveIn", _, 1113),
 	game_state_get(["Stack", ("Loc", 1113)], GS_in,[[Pop | Stack], Loc]),
 	loc_get("Revealed", Loc, true),
@@ -291,7 +291,7 @@ single_step(GS_in, GS_out, Action) :-
 % 1114, Cellar
 % -F->
 % After you enter the Cellar: Take 1 damage
-single_step(GS_in, GS_out, Action) :-
+single_step(7, GS_in, GS_out, Action, 8) :-
 	Pop = ("Move", "MoveIn", _, 1114),
 	game_state_get(["Stack", ("Loc", 1114)], GS_in, [[Pop | Stack], Loc]),
 	loc_get("Revealed", Loc, true),
@@ -303,7 +303,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Move, MoveIn:
 % Most places you can simply move into.
-single_step(GS_in, GS_out, Action) :-
+single_step(7, GS_in, GS_out, Action, -1) :-
 	Pop = ("Move", "MoveIn", _, DstId),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	\+in(DstId, [1113, 1114]),
@@ -318,7 +318,7 @@ single_step(GS_in, GS_out, Action) :-
 %%% Assign Affliction
 % Right now, just going to assign to investigator
 % TODO: Choose how to distribute and what amounts to each card
-single_step(GS_in, GS_out, Action) :-
+single_step(8, GS_in, GS_out, Action, 9) :-
 	Pop = ("Assign Affliction", D, H),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Push = ("Apply Affliction", D, H, "CurrInv"),
@@ -328,7 +328,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Apply Affliction
 % TODO: What if the investigator faints?
-single_step(GS_in, GS_out, Action) :-
+single_step(9, GS_in, GS_out, Action, -1) :-
 	Pop = ("Apply Affliction", Dmg, Hrr, "CurrInv"),
 	game_state_get(["Stack","CurrInv"], GS_in, [[Pop | Stack], I]),
 	inv_get(["Health", "Sanity"], I, [Health, Sanity]),
@@ -340,7 +340,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Next Action
 % Draw 1 card
-single_step(GS_in, GS_out, Action) :-
+single_step(2, GS_in, GS_out, Action, 10) :-
 	Pop = "Next Action",
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
 	inv_get(["Actions", "Deck"], I, [N, Deck]),
@@ -356,7 +356,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Reveal Card
 % TODO: Process revelation effects
-single_step(GS_in, GS_out, Action) :-
+single_step(10, GS_in, GS_out, Action, -1) :-
 	Pop = ("Reveal Card",Card),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
 	inv_get("Hand", I, Hand),
@@ -373,7 +373,7 @@ single_step(GS_in, GS_out, Action) :-
 % TODO: Engaged enemy at location
 % TODO: AoE
 
-single_step(GS_in, GS_out, Action) :-
+single_step(2, GS_in, GS_out, Action, 11) :-
 	Pop = "Next Action",
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
 	inv_get("Actions", I, N),
@@ -387,12 +387,12 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% End Action
 % TODO: process end action properly
-single_step(GS_in, GS_out, Action) :-
-	Pop = "End Action",
-	game_state_get("Stack", GS_in, [Pop | Stack]),
-	Push = "Next Action",
-	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
-	Action = ["Ending action"].
+%single_step(GS_in, GS_out, Action) :-
+%	Pop = "End Action",
+%	game_state_get("Stack", GS_in, [Pop | Stack]),
+%	Push = "Next Action",
+%	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
+%	Action = ["Ending action"].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SKILL TEST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -410,7 +410,7 @@ single_step(GS_in, GS_out, Action) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Skill Test, 2
-single_step(GS_in, GS_out, Action) :-
+single_step(5, GS_in, GS_out, Action, 12) :-
 	Pop = ("Skill Test", 2, Skill, Difficulty, ChaosBag),
 	game_state_get(["Stack", "CurrInv", "Invs"], GS_in, [[Pop | Stack], I, Is]),
 	% get investigator cards
@@ -457,7 +457,7 @@ single_step(GS_in, GS_out, Action) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Skill Test, 3
-single_step(GS_in, GS_out, Action) :-
+single_step(12, GS_in, GS_out, Action, 13) :-
 	Pop = ("Skill Test", 3, Skill, Difficulty, ChaosBag, AllCommit, PsCommit),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	% Reveal Chaos Token
@@ -474,7 +474,7 @@ single_step(GS_in, GS_out, Action) :-
 % When you reveal a chaos token, choose and discard 1 card from your hand:
 % Cancel that chaos token and return it to the bag. Reveal a new chaos token.
 % (Limit once per test/ability)
-single_step(GS_in, GS_out, Action) :-
+single_step(12, GS_in, GS_out, Action, 12) :-
 	Pop = ("Skill Test", 3, _, _, ChaosBag, _, _),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop|_], I]),
 	% Reveal Chaos Token
@@ -501,7 +501,7 @@ single_step(GS_in, GS_out, Action) :-
 % -F->
 % Treat each ElderSign you reveal on a chaos token as an AutoFail
 % REDCUT
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 13) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
 	inv_get("Threats", I, Threats),
@@ -518,7 +518,7 @@ single_step(GS_in, GS_out, Action) :-
 % If a Skull, Cultist, Tablet, ElderThing, or AutoFail symbol is revealed during this attack, 
 % take 1 horror
 % REDCUT
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 13) :-
 	Pop0 = ("Skill Test", 4, _, _, _, _, _, Token),
 	Pop1 = ("Fight"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | Stack], I]),
@@ -541,7 +541,7 @@ single_step(GS_in, GS_out, Action) :-
 % If a Skull, Cultist, Tablet, ElderThing, or AutoFail symbol is revealed during this evasion 
 % attempt, lose 1 action this turn.
 % REDCUT
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 13) :-
 	Pop0 = ("Skill Test", 4, _, _, _, _, _, Token),
 	Pop1 = ("Evade"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | _], I]),
@@ -562,7 +562,7 @@ single_step(GS_in, GS_out, Action) :-
 % If a Skull, Cultist, Tablet, ElderThing, or AutoFail symbol is revealed during this evasion 
 % attempt, lose 1 action this turn and take 1 horror.
 % REDCUT
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 8) :-
 	Pop0 = ("Skill Test", 4, _, _, _, _, _, Token),
 	Pop1 = ("Evade"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | Stack], I]),
@@ -601,10 +601,10 @@ single_step(GS_in, GS_out, Action) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % token drawn has no corresponding ability (i.e, just a numbered token)
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
-	in(Token, ["+1","0","-1","-2","AutoFail"]),
+	in(Token, ["+1","0","-1","-2","AutoFail"]),!,
 	token_value(Token, TokenVal),
 	Push = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, TokenVal),
 	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
@@ -617,10 +617,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% ElderSign
 % Roland Banks (1001)
 % +1 for each clue on your location
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
-	inv_get(["Id", "Loc"], I, [1001, LocId]),
+	inv_get(["Id", "Loc"], I, [1001, LocId]),!,
 	game_state_get("Loc", LocId, GS_in, Loc),
 	loc_get("Clues", Loc, Clues),
 	Push = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign", Clues),
@@ -631,10 +631,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% ElderSign
 % Dasiy Walker (1002)
 % +0. If you succeed, draw 1 card for each Tome you control
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
-	inv_get(["Id", "Active"], I, [1002, Active]),
+	inv_get(["Id", "Active"], I, [1002, Active]),!,
 	inv_set("Active", [("SkillTest", "ElderSign") | Active], I, I1),
 	Push = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign", 0),
 	game_state_set(["Stack", "Inv"], [[Push | Stack], I1], GS_in, GS_out),
@@ -643,10 +643,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% ElderSign
 % "Skids" O'Toole (1003)
 % +2. If you succeed, gain 2 resources
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
-	inv_get(["Id", "Active"], I, [1003, Active]),
+	inv_get(["Id", "Active"], I, [1003, Active]),!,
 	inv_set("Active", [("SkillTest", "ElderSign") | Active], I, I1),
 	Push = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign", 2),
 	game_state_set(["Stack", "Inv"], [[Push | Stack], I1], GS_in, GS_out),
@@ -655,10 +655,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% ElderSign
 % Agnes Baker (1004)
 % +1 for each horror on Agnes Baker
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
-	inv_get(["Id", "Horror"], I, [1004, Horror]),
+	inv_get(["Id", "Horror"], I, [1004, Horror]),!,
 	Push = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign", Horror),
 	game_state_set("Stack", [Push | Stack], GS_in, GS_out),
 	string_builder(["Token: ElderSign has the value ", Horror], Str),
@@ -667,10 +667,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% ElderSign
 % Wendy Adams (1005)
 % +0. If Wendy's Amulet is in play, you automatically succeed instead
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "ElderSign"),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
-	inv_get(["Id", "Assets"], I, [1005, Assets]),
+	inv_get(["Id", "Assets"], I, [1005, Assets]),!,
 	((in((1104,_), Assets),
 		Push = ("Skill Test", 5, Skill, 0, ChaosBag, AllCommit, PsCommit, "ElderSign", 0))
 	;(\+in((1104,_), Assets),
@@ -692,10 +692,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% Special Token
 % Easy/Standard: Skull 
 % -X. X is the number of Ghoul enemies at your location.
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Skull"),
 	game_state_get(["Stack", "Scenario"], GS_in, [[Pop | Stack], (1104, Diff)]),
-	in(Diff, ["Easy","Standard"]),	
+	in(Diff, ["Easy","Standard"]),!,	
 	% count number of ghoul enemies at my location
 	game_state_get(["CurrInv","Enemies"], GS_in, [I, Es]),
 	inv_get("Loc", I, LocId),
@@ -711,10 +711,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% Special Token
 % Easy/Standard: Cultist 
 % -1. If you fail, take 1 horror.
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Cultist"),
 	game_state_get(["Stack", "Scenario"], GS_in, [[Pop | Stack], (1104, Diff)]),
-	in(Diff, ["Easy","Standard"]),
+	in(Diff, ["Easy","Standard"]),!,
 	game_state_get("CurrInv", GS_in, I),
 	inv_get("Active", I, Active),
 	inv_set("Active", [("Cultist", (1104, Diff)) | Active], I, I1),
@@ -725,10 +725,10 @@ single_step(GS_in, GS_out, Action) :-
 %%% Special Token
 % Easy/Standard: Tablet 
 % -2. If there is a Ghoul enemy at your location, take 1 damage
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, Next) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Tablet"),
 	game_state_get(["Stack", "Scenario"], GS_in, [[Pop | Stack], (1104, Diff)]),
-	in(Diff, ["Easy","Standard"]),
+	in(Diff, ["Easy","Standard"]),!,
 	Push = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Tablet", -2),
 	% count number of ghoul enemies at my location
 	game_state_get(["CurrInv", "Enemies"], GS_in, [I, Es]),
@@ -738,11 +738,13 @@ single_step(GS_in, GS_out, Action) :-
 	length(Es2, N),
 	((N = 0, 
 		game_state_set("Stack", [Push | Stack], GS_in, GS_out), 
-	    Str = "")
+	    Str = "",
+	    Next = 14)
 	;(N @> 0,
 		Push1 = ("Assign Affliction",1,0),
 		game_state_set("Stack", [Push1, Push | Stack], GS_in, GS_out),
-		Str = " Also take 1 damage.")),
+		Str = " Also take 1 damage.",
+		Next = 8)),
 	string_builder(["Token: Tablet has value -2.", Str], Str1),
 	Action = [Str1].
 
@@ -750,7 +752,7 @@ single_step(GS_in, GS_out, Action) :-
 % Hard/Expert: Skull 
 % -2. If you fail, after this skill test, search the encounter deck and discard pile 
 % for a Ghoul enemy, and draw it. Shuffle the encounter deck.
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Skull"),
 	game_state_get(["Stack", "Scenario"], GS_in, [[Pop|Stack], (1104, Diff)]),
 	in(Diff, ["Hard", "Expert"]),
@@ -764,7 +766,7 @@ single_step(GS_in, GS_out, Action) :-
 %%% Special Token
 % Hard/Expert: Cultist
 % Reveal another token. If you fail, take 2 horror.
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, 12) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Cultist"),
 	game_state_get(["Stack", "Scenario"], GS_in, [[Pop|Stack], (1104, Diff)]),
 	in(Diff, ["Hard", "Expert"]),
@@ -778,7 +780,7 @@ single_step(GS_in, GS_out, Action) :-
 %%% Special Token
 % Hard/Expert: Tablet
 % -4. If there is a Ghoul enemy at your location, take 1 damage and 1 horror.
-single_step(GS_in, GS_out, Action) :-
+single_step(13, GS_in, GS_out, Action, Next) :-
 	Pop = ("Skill Test", 4, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "Tablet"),
 	game_state_get(["Stack", "Scenario"], GS_in, [[Pop|Stack], (1104, Diff)]),
 	in(Diff, ["Hard", "Expert"]),
@@ -791,11 +793,13 @@ single_step(GS_in, GS_out, Action) :-
 	length(Es2, N),
 	((N = 0, 
 		game_state_set("Stack", [Push | Stack], GS_in, GS_out), 
-	    Str = "")
+	    Str = "",
+	    Next = 14)
 	;(N @> 0,
 		Push0 = ("Assign Affliction",1,1),
 		game_state_set("Stack", [Push0, Push | Stack], GS_in, GS_out),
-		Str = " Also take 1 damage and 1 horror.")),
+		Str = " Also take 1 damage and 1 horror.",
+		Next = 8)),
 	string_builder(["Token: Tablet has value -4.", Str], Str1),
 	Action = [Str1].
 
@@ -804,7 +808,7 @@ single_step(GS_in, GS_out, Action) :-
 % -p->
 % Play after you reveal a chaos token with a negative modifier
 % Switch that token's "-" to a "+"
-single_step(GS_in, GS_out, Action) :-
+single_step(14, GS_in, GS_out, Action, 14) :-
 	Pop = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, TokenVal),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	TokenVal @< 0,
@@ -833,7 +837,7 @@ single_step(GS_in, GS_out, Action) :-
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-single_step(GS_in, GS_out, Action) :-
+single_step(14, GS_in, GS_out, Action, 15) :-
 	Pop = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, TokenVal),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Token \= "AutoFail",
@@ -856,7 +860,7 @@ single_step(GS_in, GS_out, Action) :-
 	string_builder(["Modified Skill Value: ", ModifiedValue], Str),
 	Action = [Str].
 
-single_step(GS_in, GS_out, Action) :-
+single_step(14, GS_in, GS_out, Action, 15) :-
 	Pop = ("Skill Test", 5, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "AutoFail", _),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Push = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "AutoFail", 0),
@@ -881,7 +885,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Skill Test, 6
 % Success
-single_step(GS_in, GS_out, Action) :-
+single_step(15, GS_in, GS_out, Action, 16) :-
 	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Token \= "AutoFail",
@@ -893,7 +897,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Skill Test, 6
 % Fail
-single_step(GS_in, GS_out, Action) :-
+single_step(15, GS_in, GS_out, Action, 16) :-
 	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	Token \= "AutoFail",
@@ -905,7 +909,7 @@ single_step(GS_in, GS_out, Action) :-
 
 %%% Skill Test, 6
 % AutoFail always fails
-single_step(GS_in, GS_out, Action) :-
+single_step(15, GS_in, GS_out, Action, 16) :-
 	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, "AutoFail", 0),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	SumVal is 0 - Difficulty,
@@ -919,7 +923,7 @@ single_step(GS_in, GS_out, Action) :-
 % Note: if AutoFail was drawn, then you don't get +2
 %       should this even really be allowed to be played then?
 
-single_step(GS_in, GS_out, Action) :-
+single_step(15, GS_in, GS_out, Action, 15) :-
 	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
 	ModifiedVal @< Difficulty,
@@ -945,7 +949,7 @@ single_step(GS_in, GS_out, Action) :-
 %   Draw 1 card.
 % Note: if AutoFail was drawn, then you don't get +2
 
-single_step(GS_in, GS_out, Action) :-
+single_step(15, GS_in, GS_out, Action, 17) :-
 	Pop = ("Skill Test", 6, Skill, Difficulty, ChaosBag, AllCommit, PsCommit, Token, ModifiedVal),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),	
 	ModifiedVal @< Difficulty,
@@ -980,7 +984,7 @@ single_step(GS_in, GS_out, Action) :-
 
 % Investigate Location, Success
 % Discover clues at your location
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 18) :-
 	Pop0 = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, "Success", SumVal),
 	Pop1 = ("Investigate", ("Location", LocId), false),
 	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
@@ -995,7 +999,7 @@ single_step(GS_in, GS_out, Action) :-
 
 % Investigate Location, Fail
 % Don't discover any clues
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 16) :-
 	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Fail", _),
 	Pop1 = ("Investigate", ("Location", LocId), false),
 	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
@@ -1006,7 +1010,7 @@ single_step(GS_in, GS_out, Action) :-
 
 % Investigate Location
 % Finish applying skill test results
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 19) :-
 	Pop0 = ("Skill Test", 7, _, _, [], PsCommit, _, _, _),
 	Pop1 = ("Investigate", _, true),
 	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
@@ -1017,7 +1021,7 @@ single_step(GS_in, GS_out, Action) :-
 % 1033, Dr. Milan Christopher
 % -r->
 % After you successfully investigate: Gain 1 resouce
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 11) :-
 	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", _),
 	Pop1 = ("Investigate", _, _),	
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | Stack], I]),
@@ -1035,7 +1039,7 @@ single_step(GS_in, GS_out, Action) :-
 
 % 1045, Burglary
 % Investigate, if you succeed, instead of discovering clues, gain 3 resources.
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 11) :-
 	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", _),
 	Pop1 = ("Investigate", ("Special", 1045), false),	
 	game_state_get("Stack", GS_in, [Pop0, Pop1 | Stack]),
@@ -1051,7 +1055,7 @@ single_step(GS_in, GS_out, Action) :-
 % After you successfully investigate by 2 or more,
 % exhaust Scavenging:
 % Choose an Item card in your discard pile and add it to your hand
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 16) :-
 	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", N),
 	Pop1 = ("Investigate", _, _),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | _], I]),
@@ -1076,7 +1080,7 @@ single_step(GS_in, GS_out, Action) :-
 % After attached location is successfully investigated:
 % Discard Obscuring Fog
 % TODO: How to force events
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 16) :-
 	Pop0 = ("Skill Test", 7, _, _, _, _, _, "Success", _),
 	Pop1 = ("Investigate", _, _),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop0, Pop1 | _], I]),
@@ -1095,7 +1099,7 @@ single_step(GS_in, GS_out, Action) :-
 
 % TODO: make this one single large step and not multiple small ones
 % Skip non-skill cards
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 16) :-
 	Pop = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, PassFail, SumVal),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	choose(AllCommit, Card, AllCommit0),
@@ -1107,7 +1111,7 @@ single_step(GS_in, GS_out, Action) :-
 
 % 1039, Deduction
 % Fail skill test, it has no effect.
-single_step(GS_in, GS_out, Action) :-
+single_step(16, GS_in, GS_out, Action, 16) :-
 	Pop = ("Skill Test", 7, Skill, ChaosBag, AllCommit, PsCommit, Token, "Fail", SumVal),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	choose(AllCommit, 1039, AllCommit0),
@@ -1124,7 +1128,7 @@ single_step(GS_in, GS_out, Action) :-
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-single_step(GS_in, GS_out, Action) :-
+single_step(19, GS_in, GS_out, Action, -1) :-
 	Pop = ("Skill Test", 8, PsCommit),
 	game_state_get("Stack", GS_in, [Pop | Stack]),
 	foldl(discard_committed, PsCommit, GS_in, GS_tmp),
@@ -1138,7 +1142,7 @@ single_step(GS_in, GS_out, Action) :-
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-single_step(GS_in, GS_out, Action) :-
+single_step(18, GS_in, GS_out, Action, -1) :-
 	Pop = ("Discover Clues", LocId, NClues),
 	game_state_get(["Stack", "CurrInv", ("Loc",LocId)], GS_in, [[Pop | Stack], I, Loc]),
 	loc_get("Clues", Loc, LocClues),
@@ -1158,7 +1162,7 @@ single_step(GS_in, GS_out, Action) :-
 % Discard that many clues from Cover Up instead.
 % Only really need to do this if there are 1 or more clues
 
-single_step(GS_in, GS_out, Action) :-
+single_step(18, GS_in, GS_out, Action, -1) :-
 	Pop = ("Discover Clues", LocId, NClues),
 	game_state_get(["Stack", "CurrInv", ("Loc",LocId)], GS_in, [[Pop | Stack], I, Loc]),
 	loc_get("Clues", Loc, LocClues),
@@ -1181,7 +1185,7 @@ single_step(GS_in, GS_out, Action) :-
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-single_step(GS_in, GS_out, Action) :-
+single_step(11, GS_in, GS_out, Action, -1) :-
 	Pop = ("Gain Resources", N),
 	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
 	inv_get("Resources", I, Res),
@@ -1264,36 +1268,17 @@ insert_card(Card,[X|L],[X|L1]) :-
 	Card @> X,
 	insert_card(Card,L,L1).
 
-step_all(GS,GS,[]) :- 
-	\+single_step(GS,_,_).
-step_all(GS,GSN,[A|L]) :- 
-	single_step(GS,GS1,A),
-	step_all(GS1,GSN,L).
+step_all(_,GS,GS,[]) :- 
+	\+single_step(_,GS,_,_,_).
+step_all(-1,GS,GSN,[A|L]) :- 
+	single_step(_,GS,GS1,A,N),
+	step_all(N,GS1,GSN,L).
+step_all(M,GS,GSN,[A|L]) :- 
+	M \= -1,
+	single_step(M,GS,GS1,A,N),
+	step_all(N,GS1,GSN,L).
 
-step_all(GS,(GSN,A)) :-
-	step_all(GS,GSN,A).
-
-step_all_unique(GS,GSN,A) :-
-	setof((GS1,A1),step_all(GS,GS1,A1),(GSN,A)).
-
-step_all_atom(GS,GSN,A) :-
-	term_to_atom(GST,GS),
-	step_all(GST,GSNT,AT),
-	term_to_atom(GSNT,GSN),
-	term_to_atom(AT,A).
-
-step_action(GS,GSN,A) :-
-	step_all(GS,GS1,A),
+step_action(N,GS,GSN,A) :-
+	step_all(N,GS,GS1,A),
 	game_state_get("Stack",GS1,["End Action"|Stack]),
 	game_state_set("Stack",["Next Action"|Stack],GS1,GSN).
-
-step_action(GS,GSN) :- 
-	setof(GS1, step_action(GS,GS1,_), GS2),
-	choose(GS2, GSN, _).
-
-step_action_atom(GS,GSN,A) :-
-	term_to_atom(GST,GS),
-	step_action(GST,GSNT,AT),
-	term_to_atom(GSNT,GSN),
-	term_to_atom(AT,A).
-% Stepping an action

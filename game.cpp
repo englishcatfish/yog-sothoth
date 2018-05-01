@@ -100,11 +100,11 @@ int main() {
 		PL_close_query(q);
 	
 		// Uncomment the following for autosteps
-		/*if(choices.size() == 1) {
+		if(choices.size() == 1) {
 			cout << choices[0][0] << endl;
 			selection = 0;
 			continue;
-		}*/
+		}
 
 		cout << endl;
 		for(int i = 0; i < choices.size(); i++) {
@@ -115,11 +115,16 @@ int main() {
 			cout << endl;
 		}
 
+		if(choices.size() == 0) {
+			break;
+		}
+
 		cout << choices.size() << ". Exit." << endl;
 		cout << "Selection: ";
 		cin >> selection;
 	} while(selection < choices.size());
-
+	
+	cout << "No more choices, exiting." << endl;
 	PL_halt(1);
  	return 0;
 }

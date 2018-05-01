@@ -7,6 +7,7 @@
 
 :- ensure_loaded(investigator).
 :- ensure_loaded(location).
+:- ensure_loaded(helper).
 
 inv_has_id(Id,I) :- inv_get("Id",I,Id).
 
@@ -42,8 +43,7 @@ game_state_get("NumInv",GS,N) :-
 	game_state_get("InvOrder",GS,O),
 	length(O,N).
 
-game_state_get([H],I,[X]) :-
-	game_state_get(H,I,X).
+game_state_get([],_,[]).
 game_state_get([H|T],I,[X|L]) :- 
 	game_state_get(H,I,X), 
 	game_state_get(T,I,L).
@@ -95,7 +95,6 @@ replace_loc(L,[H|T],[H|L1]) :-
 	loc_get("Id",L,Id1), loc_get("Id",H,Id2), Id1 \= Id2,
 	replace_loc(L,T,L1).
 
-get_inv(Id,[I|_],I) :- inv_get("Id",I,Id), !.
-get_inv(Id,[X|L],I) :-
-	inv_get("Id",X,Id1), Id \= Id1,
-	get_inv(Id,L,I).
+get_inv(Id,L,I) :-
+	choose(L,I,_),
+	inv_get("Id",I,Id),!.
