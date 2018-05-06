@@ -125,6 +125,7 @@ int main() {
 	} while(selection < choices.size());
 	
 	cout << "No more choices, exiting." << endl;
+	cout << "If this is unexpected, then Prolog predicates for this case haven't been created." << endl;
 	PL_halt(1);
  	return 0;
 }

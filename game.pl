@@ -54,7 +54,7 @@ sample_gs("ST.2a", GS) :-
 sample_gs("Action", GS) :-
 	ChaosBag = ["+1","0","-1","-2","Skull","Cultist","Tablet","AutoFail","ElderSign"],
 	G = ((1104,"Easy"),"I",[1001,1002],1001,1001,ChaosBag),
-	I1 = (1001,([1087,1039],[1087,1039],[],[],[]),(1111,3,0,0,5,0,false),(3,3,3,3,6,6),[],[]),
+	I1 = (1001,([1087,1039,1019],[1087,1039],[],[],[]),(1111,3,0,0,5,0,false),(3,3,3,3,6,6),[],[]),
 	I2 = (1002,([],[1014,1087],[],[],[]),(1111,3,0,0,5,0,false),(3,3,3,3,6,6),[],[]),
 	Is = [I1,I2],
 	Map = [(1111,true,false,4,[])],
@@ -225,7 +225,8 @@ single_step(GS_in, GS_out, Action) :-
 	Push1 = ("Investigate", ("Location", LocId), false),
 	Push2 = ("Skill Test", 2, "Intel", Shroud, ChaosBag),
 	game_state_set(["Stack", "Inv"],[[Push2, Push1, Push0], I1], GS_in, GS_out),
-	string_builder(["Investigate ", LocId], Str),
+	location_get("Name", LocId, LocName),
+	string_builder(["Investigate location: ", LocName], Str),
 	Action = [Str].
 
 %%% Next Action
@@ -351,7 +352,8 @@ single_step(GS_in, GS_out, Action) :-
 	Push0 = "End Action",
 	Push1 = ("Reveal Card",Card),
 	game_state_set(["Stack", "Inv"], [[Push1, Push0], I1], GS_in, GS_out),
-	string_builder(["Drew card ", Card], Str),
+	card_get("Name", Card, CardName),
+	string_builder(["Draw card: ", CardName], Str),
 	Action = [Str].
 
 %%% Reveal Card
@@ -366,7 +368,6 @@ single_step(GS_in, GS_out, Action) :-
 	Action = ["Adding Card to hand"].
 
 % TODO: Play a card
-% TODO: Gain a resource
 % TODO: Activate an ==> costed ability
 % TODO: Fight enemy at location
 % TODO: Evade enemy at location
@@ -383,7 +384,63 @@ single_step(GS_in, GS_out, Action) :-
 	Push0 = "End Action",
 	Push1 = ("Gain Resources", 1),
 	game_state_set(["Stack", "Inv"], [[Push1, Push0], I0], GS_in, GS_out),
-	Action = ["Next Action: Gain a Resource."].
+	Action = ["Gain a Resource."].
+
+%%% Next Action
+% Play a card
+single_step(GS_in, GS_out, Action) :-
+	Pop = "Next Action",
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop], I]),
+	inv_get("Actions", I, N),
+	N @> 0,
+	N0 is N - 1,
+	inv_get("Hand", I, Hand),
+	choose(Hand, Card, Hand0),
+	% enough resources?
+	card_get("Cost", Card, Cost),
+	inv_get("Resources", I, Res),
+	Res @>= Cost,
+	% Pay the cost first
+	Res0 is Res - Cost,
+	inv_set(["Actions", "Hand", "Resources"], [N0, Hand0, Res0], I, I0),
+	Push0 = "End Action",
+	Push1 = ("Play Card", Card),
+	game_state_set(["Stack", "Inv"],[[Push1, Push0], I0], GS_in, GS_out),
+	card_get("Name", Card, CardName),
+	string_builder(["Play card: ", CardName," (spend ", Cost, " resources)"], Str),
+	Action = [Str].
+
+%%% Play Card
+% Asset card, no slot
+single_step(GS_in, GS_out, Action) :-
+	Pop = ("Play Card", Card),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
+	card_get(["Kind","Slot"], Card, ["Asset",("None",_)]),
+	inv_get("Assets", I, Assets),
+	setup_asset(Card, Asset),
+	insert_asset(Asset, Assets, Assets0),
+	inv_set("Assets", Assets0, I, I0),
+	game_state_set(["Stack", "Inv"], [Stack, I0], GS_in, GS_out),
+	card_get("Name", Card, CardName),
+	string_builder(["Adding ", CardName, " to assets."], Str),
+	Action = [Str].
+
+%%% Play Card
+% Asset card, slotted (simple)
+% Enough slots exist, not counting bonuses
+single_step(GS_in, GS_out, Action) :-
+	Pop = ("Play Card", Card),
+	game_state_get(["Stack", "CurrInv"], GS_in, [[Pop | Stack], I]),
+	card_get(["Kind","Slot"], Card, ["Asset",(Slot,SlotCount)]),
+	Slot \= "None",
+	inv_get("Assets", I, Assets),
+	setup_asset(Card, Asset),
+	insert_asset(Asset, Assets, Assets0),
+	inv_set("Assets", Assets0, I, I0),
+	game_state_set(["Stack", "Inv"], [Stack, I0], GS_in, GS_out),
+	card_get("Name", Card, CardName),
+	string_builder(["Adding ", CardName, " to assets."], Str),
+	Action = [Str].
 
 %%% End Action
 % TODO: process end action properly
@@ -1264,6 +1321,17 @@ insert_card(Card,[X|L],[X|L1]) :-
 	Card @> X,
 	insert_card(Card,L,L1).
 
+setup_asset(1019, (1019, [("Supply", 3)])).
+setup_asset(1087, (1087, [("Supply", 3)])).
+
+insert_asset(X,[],[X]).
+insert_asset((X,TX),[(Y,TY)|As],[(X,TX),(Y,TY)|As]) :-
+	X @=< Y.
+insert_asset((X,TX),[(Y,TY)|As],[(Y,TY)|As0]) :-
+	X @> Y,
+	insert_asset((X,TX),As,As0).
+
+
 step_all(GS,GS,[]) :- 
 	\+single_step(GS,_,_).
 step_all(GS,GSN,[A|L]) :- 
@@ -1297,3 +1365,4 @@ step_action_atom(GS,GSN,A) :-
 	term_to_atom(GSNT,GSN),
 	term_to_atom(AT,A).
 % Stepping an action
+

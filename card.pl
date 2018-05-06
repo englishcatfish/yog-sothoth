@@ -300,6 +300,11 @@ card_get("SkillPips",Id,S) :-
 	; card(Id,_,"Event",_,_,S)
 	; card(Id,_,"Skill",_,S).
 
+card_get([],_,[]).
+card_get([H|T],I,[X|L]) :- 
+	card_get(H,I,X), 
+	card_get(T,I,L).
+
 has_type(Type,Card) :-
 	card_get("Types",Card,Types),
 	choose(Types,Type,_).
